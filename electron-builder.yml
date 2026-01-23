@@ -1,26 +1,17 @@
-appId: com.teammanager.app
-productName: Team Manager
+appId: com.managerpro.app
+productName: Manager Pro
 directories:
   buildResources: assets
 files:
-  - from: .
+  - from: dist
     to: .
-    filter:
-      - package.json
-      - main.js
-      - preload.js
-      - app-db.js
-      - ui-manager.js
-      - index-electron.html
-      - styles.css
-      - node_modules
+  - from: get-work-hours.ps1
+    to: .
+  - node_modules
 
 win:
   target:
-    - nsis
     - portable
-  certificateFile: null
-  certificatePassword: null
 
 nsis:
   oneClick: false

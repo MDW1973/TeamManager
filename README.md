@@ -1,112 +1,76 @@
-# Team Manager - Electron App
+# Manager Pro v1.0.0
 
-A desktop application for managing team structures, employee details, training records, objectives, and 1-2-1 session tasks.
+A unified React + TypeScript Electron desktop application for team management and daily task tracking.
 
 ## Features
 
-- **Organization Chart** - Visual hierarchical team structure
-- **Employee Management** - Add, edit, delete employees with grades and departments
-- **Training & Certifications** - Track training courses and certifications with dates
-- **Objectives** - Set and track employee objectives with target dates
-- **1-2-1 Session Tasks** - Manage tasks for upcoming 1-2-1 sessions
-- **Admin Panel** - Sortable employee table with bulk actions
-- **Data Persistence** - All data stored in local SQLite database
-- **Import/Export** - CSV import/export for data backup and migration
+### Team Manager
+- Organization chart with hierarchical employee structure
+- Employee management (add, edit, delete)
+- Training & certifications tracking
+- Appraisal and one-to-one objectives
+- Manager assignment and reporting structure
 
-## Installation
+### Daily Task Manager
+- Daily task creation and management with priorities
+- Recurring tasks (Daily, Weekly, Monthly)
+- Task rollover for incomplete items
+- Date navigation
+
+### Working Hours
+- Login/logout tracking from Windows Event Log
+- Weekly view (Mon-Fri by default, expandable)
+- 30-minute break deduction
+- Copy to clipboard for spreadsheet export
+
+## Quick Start
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm
+- Node.js 16+ and npm
+- Windows 10/11
 
 ### Setup
-
-1. Install dependencies:
 ```bash
 npm install
+npm run electron:dev
 ```
 
-2. Start the app:
+### Build
 ```bash
-npm start
+npm run build              # Development build
+npm run electron:dist      # Production build with installer
 ```
 
-For development with DevTools:
-```bash
-npm run dev
+## Project Structure
+
 ```
-
-## Building
-
-To create a distributable package:
-```bash
-npm run build
+src/
+├── main.ts                 # Electron main process
+├── preload.ts              # IPC bridge
+├── types/index.ts          # TypeScript definitions
+├── services/               # Data persistence
+└── renderer/               # React UI
+    ├── App.tsx
+    └── components/
+        ├── Sidebar.tsx
+        ├── TeamManager.tsx
+        ├── DailyTasks.tsx
+        └── WorkingHours.tsx
 ```
-
-This will create an installer in the `dist` folder.
 
 ## Data Storage
 
-All data is stored in a local SQLite database located at:
-- **Windows**: `%APPDATA%\team-manager\team-manager.db`
-- **macOS**: `~/Library/Application Support/team-manager/team-manager.db`
-- **Linux**: `~/.config/team-manager/team-manager.db`
+- **Team Data**: `%APPDATA%\manager-pro\team-data.json`
+- **Tasks Data**: `%APPDATA%\manager-pro\tasks-data.json`
+- **Work Hours**: Retrieved from Windows Event Log
 
-## File Structure
+## Development
 
-- `main.js` - Electron main process and database handlers
-- `preload.js` - Secure IPC bridge between renderer and main process
-- `app-db.js` - Data management layer with database integration
-- `ui-manager.js` - UI rendering and event handling
-- `index-electron.html` - Application UI
-- `styles.css` - Application styling
-- `package.json` - Project dependencies and scripts
-
-## Usage
-
-### Adding Employees
-1. Click "+ Add Employee" button
-2. Fill in employee details (name, position, grade, department, manager, email)
-3. Click "Save Employee"
-
-### Managing Training
-1. Click on an employee to view details
-2. Click "+ Add" in the Training & Certifications section
-3. Enter training name, type (Training/Certification), and completion date
-4. Click "Add Training"
-
-### Setting Objectives
-1. Click on an employee to view details
-2. Click "+ Add" in the Objectives section
-3. Enter objective text and target date
-4. Click "Add Objective"
-
-### 1-2-1 Session Tasks
-1. Click on an employee to view details
-2. Click "+ Add" in the 1-2-1 Session Tasks section
-3. Enter task description and priority level
-4. Click "Add Task"
-5. Check off completed tasks
-6. Use "📧 Email Tasks" to send tasks to employee
-
-### Exporting Data
-1. Go to Admin panel
-2. Click "⬇️ Export" to download CSV backup
-
-### Importing Data
-1. Go to Admin panel
-2. Click "⬆️ Import" and select a CSV file
-3. Data will be merged with existing records
-
-## Grade System
-
-- **PO6** - Senior leadership (Gold)
-- **PO4** - Lead/Principal (Silver)
-- **PO2** - Senior specialist (Bronze)
-- **SO1** - Specialist (Blue)
-- **A3** - Associate/Apprentice (Orange)
-- **Contractor** - External contractor (Purple)
-- **Student** - Student/Intern (Green)
+### Available Scripts
+- `npm run dev` - Webpack watch mode
+- `npm run build` - Production build
+- `npm run electron:dev` - Start dev app
+- `npm run electron:dist` - Build installer
 
 ## License
 

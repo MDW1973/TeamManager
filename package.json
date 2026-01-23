@@ -1,16 +1,69 @@
 {
-  "name": "team-manager",
+  "name": "manager-pro",
   "version": "1.0.0",
-  "description": "Team Management System with Org Chart",
-  "main": "main.js",
+  "description": "Unified Team Manager and Daily Task Manager for Windows 11",
+  "main": "dist/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build": "electron-builder"
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "start": "electron dist/main.js",
+    "dev": "webpack --mode development --watch",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on dist/main.js && electron .\"",
+    "electron:pack": "npm run build && electron-builder",
+    "electron:dist": "npm run build && electron-builder --publish=never"
   },
+  "keywords": [
+    "electron",
+    "react",
+    "typescript",
+    "team-manager",
+    "task-manager"
+  ],
+  "author": "",
+  "license": "MIT",
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "concurrently": "^8.2.0",
+    "css-loader": "^6.8.0",
     "electron": "^27.0.0",
-    "electron-builder": "^24.6.4"
+    "electron-builder": "^24.6.4",
+    "html-webpack-plugin": "^5.5.0",
+    "style-loader": "^3.3.0",
+    "ts-loader": "^9.4.0",
+    "typescript": "^5.0.0",
+    "wait-on": "^7.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "build": {
+    "appId": "com.managerpro.app",
+    "productName": "Manager Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "get-work-hours.ps1",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "certificateFile": null,
+      "certificatePassword": null,
+      "signingHashAlgorithms": ["sha256"],
+      "sign": null
+    }
   }
 }
