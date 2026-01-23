@@ -1,0 +1,44 @@
+appId: com.teammanager.app
+productName: Team Manager
+directories:
+  buildResources: assets
+files:
+  - from: .
+    to: .
+    filter:
+      - package.json
+      - main.js
+      - preload.js
+      - app-db.js
+      - ui-manager.js
+      - index-electron.html
+      - styles.css
+      - node_modules
+
+win:
+  target:
+    - nsis
+    - portable
+  certificateFile: null
+  certificatePassword: null
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+portable:
+  artifactName: ${productName}-${version}.exe
+
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.productivity
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Office
