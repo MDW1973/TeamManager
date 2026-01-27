@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Employee, TeamData } from '../../types';
 import './TeamManager.css';
 
-export const TeamManager: React.FC = () => {
+export const TeamManager: React.FC<{ navigateToEmployeeId?: string | null }> = ({ navigateToEmployeeId }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +27,16 @@ export const TeamManager: React.FC = () => {
   useEffect(() => {
     loadEmployees();
   }, []);
+
+  useEffect(() => {
+    // If navigating from calendar to a specific employee
+    if (navigateToEmployeeId && employees.length > 0) {
+      const employee = employees.find(e => e.id === navigateToEmployeeId);
+      if (employee) {
+        setSelectedEmployee(employee);
+      }
+    }
+  }, [navigateToEmployeeId, employees]);
 
   useEffect(() => {
     // Auto-expand all managers on load
@@ -197,12 +207,14 @@ export const TeamManager: React.FC = () => {
 
         // Parse headers
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const typeIdx = headers.indexOf('type');
         const nameIdx = headers.indexOf('name');
         const positionIdx = headers.indexOf('position');
         const gradeIdx = headers.indexOf('grade');
         const departmentIdx = headers.indexOf('department');
         const managerIdx = headers.indexOf('manager');
         const emailIdx = headers.indexOf('email');
+        const listVerticallyIdx = headers.indexOf('listvertically');
 
         const newEmployees: Employee[] = [];
         const managerMap: Record<string, string> = {};
@@ -214,13 +226,15 @@ export const TeamManager: React.FC = () => {
 
           const fields = line.split(',').map(f => f.trim().replace(/^"|"$/g, ''));
           
-          // Skip non-employee rows
-          if (fields[0] && fields[0] !== 'EMPLOYEE' && fields[0] !== 'TRAINING' && 
-              fields[0] !== 'OBJECTIVE') {
+          // Only process EMPLOYEE rows
+          const rowType = typeIdx !== -1 ? fields[typeIdx] : '';
+          if (rowType === 'EMPLOYEE') {
             const name = nameIdx !== -1 ? fields[nameIdx] : '';
             if (!name) continue;
 
             const id = Date.now().toString() + Math.random();
+            const listVertically = listVerticallyIdx !== -1 ? fields[listVerticallyIdx].toLowerCase() === 'yes' : false;
+            
             const employee: Employee = {
               id,
               name,
@@ -229,7 +243,7 @@ export const TeamManager: React.FC = () => {
               department: departmentIdx !== -1 ? fields[departmentIdx] : '',
               manager: null,
               email: emailIdx !== -1 ? fields[emailIdx] : '',
-              listReportsVertically: false,
+              listReportsVertically: listVertically,
               training: [],
               objectives: [],
               oneToOneObjectives: []
@@ -709,7 +723,22 @@ export const TeamManager: React.FC = () => {
                           ) : (
                             <>
                               <div className="objective-content">
-                                <span className="objective-text">{o.text}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={o.completed || false}
+                                  onChange={async () => {
+                                    const updatedObjectives = selectedEmployee.objectives.map(obj =>
+                                      obj.id === o.id ? { ...obj, completed: !obj.completed } : obj
+                                    );
+                                    const updatedEmployee = { ...selectedEmployee, objectives: updatedObjectives };
+                                    await window.electronAPI.team.updateEmployee(selectedEmployee.id, updatedEmployee);
+                                    setSelectedEmployee(updatedEmployee);
+                                    loadEmployees();
+                                  }}
+                                  className="objective-checkbox"
+                                  title="Mark as complete"
+                                />
+                                <span className={`objective-text ${o.completed ? 'completed' : ''}`}>{o.text}</span>
                                 {o.dueDate && <span className="objective-date">Due: {new Date(o.dueDate).toLocaleDateString()}</span>}
                               </div>
                               <div className="objective-actions">
@@ -724,7 +753,8 @@ export const TeamManager: React.FC = () => {
                                   className="objective-action-btn"
                                   onClick={() => {
                                     const subject = `Objective: ${o.text}`;
-                                    const body = `Hi ${selectedEmployee.name},\n\nRegarding your objective: ${o.text}\n\nBest regards`;
+                                    const dueDateText = o.dueDate ? `\nDue Date: ${new Date(o.dueDate).toLocaleDateString()}` : '';
+                                    const body = `Hi ${selectedEmployee.name},\n\nRegarding your objective: ${o.text}${dueDateText}\n\nBest regards`;
                                     const mailtoLink = `mailto:${selectedEmployee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                                     window.location.href = mailtoLink;
                                   }}
@@ -808,7 +838,22 @@ export const TeamManager: React.FC = () => {
                           ) : (
                             <>
                               <div className="objective-content">
-                                <span className="objective-text">{o.text}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={o.completed || false}
+                                  onChange={async () => {
+                                    const updatedOneToOneObjectives = (selectedEmployee.oneToOneObjectives || []).map(obj =>
+                                      obj.id === o.id ? { ...obj, completed: !obj.completed } : obj
+                                    );
+                                    const updatedEmployee = { ...selectedEmployee, oneToOneObjectives: updatedOneToOneObjectives };
+                                    await window.electronAPI.team.updateEmployee(selectedEmployee.id, updatedEmployee);
+                                    setSelectedEmployee(updatedEmployee);
+                                    loadEmployees();
+                                  }}
+                                  className="objective-checkbox"
+                                  title="Mark as complete"
+                                />
+                                <span className={`objective-text ${o.completed ? 'completed' : ''}`}>{o.text}</span>
                                 {o.dueDate && <span className="objective-date">Due: {new Date(o.dueDate).toLocaleDateString()}</span>}
                               </div>
                               <div className="objective-actions">
@@ -823,7 +868,8 @@ export const TeamManager: React.FC = () => {
                                   className="objective-action-btn"
                                   onClick={() => {
                                     const subject = `One to One Objective: ${o.text}`;
-                                    const body = `Hi ${selectedEmployee.name},\n\nRegarding your one to one objective: ${o.text}\n\nBest regards`;
+                                    const dueDateText = o.dueDate ? `\nDue Date: ${new Date(o.dueDate).toLocaleDateString()}` : '';
+                                    const body = `Hi ${selectedEmployee.name},\n\nRegarding your one to one objective: ${o.text}${dueDateText}\n\nBest regards`;
                                     const mailtoLink = `mailto:${selectedEmployee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                                     window.location.href = mailtoLink;
                                   }}
@@ -868,6 +914,26 @@ export const TeamManager: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Notes Section */}
+              <div className="detail-column notes-section">
+                <div className="section-header">
+                  <h3>Notes & Comments</h3>
+                </div>
+                <textarea
+                  value={selectedEmployee.notes || ''}
+                  onChange={async (e) => {
+                    const updated = { ...selectedEmployee, notes: e.target.value };
+                    setSelectedEmployee(updated);
+                  }}
+                  onBlur={async () => {
+                    await window.electronAPI.team.updateEmployee(selectedEmployee.id, selectedEmployee);
+                    loadEmployees();
+                  }}
+                  placeholder="Add notes or comments about this employee..."
+                  className="notes-textarea"
+                />
               </div>
 
             </div>

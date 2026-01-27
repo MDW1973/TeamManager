@@ -11,6 +11,7 @@ export interface Employee {
   training: Training[];
   objectives: Objective[];
   oneToOneObjectives: OneToOneObjective[];
+  notes?: string;
 }
 
 export interface Training {
@@ -24,12 +25,14 @@ export interface Objective {
   id: string;
   text: string;
   dueDate?: string;
+  completed?: boolean;
 }
 
 export interface OneToOneObjective {
   id: string;
   text: string;
   dueDate?: string;
+  completed?: boolean;
 }
 
 // Daily Task Manager Types
@@ -38,11 +41,13 @@ export interface DailyTask {
   taskGroupId: string;
   text: string;
   date: string;
+  dueDate?: string;
   completed: boolean;
   priority: 'low' | 'medium' | 'high';
   recurring?: boolean;
   recurringPattern?: 'daily' | 'weekly' | 'monthly';
   rolledOver?: boolean;
+  assignedTo?: string;
 }
 
 export interface RecurringTask {

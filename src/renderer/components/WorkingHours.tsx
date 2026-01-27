@@ -90,7 +90,7 @@ export const WorkingHours: React.FC = () => {
 
           if (dayData.logons.length > 0) {
             const firstLogon = dayData.logons[0];
-            login = firstLogon.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            login = firstLogon.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 
             // Find the last logoff that's after the first logon
             let lastLogoff: Date | null = null;
@@ -102,7 +102,7 @@ export const WorkingHours: React.FC = () => {
             }
 
             if (lastLogoff) {
-              logout = lastLogoff.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+              logout = lastLogoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
               totalMinutes = (lastLogoff.getTime() - firstLogon.getTime()) / 60000;
             } else {
               // No logoff today, calculate until now if it's today
@@ -184,7 +184,13 @@ export const WorkingHours: React.FC = () => {
   };
 
   const getWeekTotal = (days: WorkHourEntry[]): string => {
-    const total = days.reduce((sum, entry) => sum + entry.totalMinutes, 0);
+    // Subtract 30 min break for each day that has hours
+    const total = days.reduce((sum, entry) => {
+      if (entry.totalMinutes > 0) {
+        return sum + Math.max(0, entry.totalMinutes - 30);
+      }
+      return sum;
+    }, 0);
     return formatMinutes(total);
   };
 
@@ -200,11 +206,11 @@ export const WorkingHours: React.FC = () => {
         const dateStr = dayDate.toISOString().split('T')[0];
         const entry = week.days.find(d => d.date === dateStr);
         
-        // Remove AM/PM from times
-        const login = entry?.login ? entry.login.replace(/\s(AM|PM)/i, '') : '-';
+        // Times are already in 24-hour format
+        const login = entry?.login || '-';
         const logout1 = '12:00';
         const login2 = '12:30';
-        const logout2 = entry?.logout ? entry.logout.replace(/\s(AM|PM)/i, '') : '-';
+        const logout2 = entry?.logout || '-';
         
         lines.push(`${login}\t${logout1}\t${login2}\t${logout2}`);
       });
@@ -233,7 +239,13 @@ export const WorkingHours: React.FC = () => {
   };
 
   const getMonFriTotal = (days: WorkHourEntry[]): string => {
-    const total = days.slice(0, 5).reduce((sum, entry) => sum + entry.totalMinutes, 0);
+    // Subtract 30 min break for each day that has hours (Mon-Fri only)
+    const total = days.slice(0, 5).reduce((sum, entry) => {
+      if (entry.totalMinutes > 0) {
+        return sum + Math.max(0, entry.totalMinutes - 30);
+      }
+      return sum;
+    }, 0);
     return formatMinutes(total);
   };
 

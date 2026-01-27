@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { DailyTask, RecurringTask } from '../../types';
 import './DailyTasks.css';
 
-export const DailyTasks: React.FC = () => {
+export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navigateToDate }) => {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [showRecurringModal, setShowRecurringModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskText, setEditingTaskText] = useState('');
+  const [editingTaskDueDate, setEditingTaskDueDate] = useState('');
   const [editingTaskPriority, setEditingTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newRecurringText, setNewRecurringText] = useState('');
   const [newRecurringPattern, setNewRecurringPattern] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -22,9 +24,22 @@ export const DailyTasks: React.FC = () => {
   const [recurringTasksCreated, setRecurringTasksCreated] = useState(false);
 
   useEffect(() => {
-    loadRecurringTasks();
-    handleRollover();
-    setRecurringTasksCreated(false);
+    // If navigating from calendar, update the selected date
+    if (navigateToDate) {
+      setSelectedDate(navigateToDate);
+    }
+  }, [navigateToDate]);
+
+  useEffect(() => {
+    const loadDataForDate = async () => {
+      await loadRecurringTasks();
+      await handleRollover();
+      setRecurringTasksCreated(false);
+      // Load tasks after rollover completes
+      await loadTasks();
+    };
+    
+    loadDataForDate();
   }, [selectedDate]);
 
   useEffect(() => {
@@ -36,7 +51,10 @@ export const DailyTasks: React.FC = () => {
 
   const loadTasks = async () => {
     try {
+      console.log(`Loading tasks for ${selectedDate}`);
       const tasksForDate = await window.electronAPI.tasks.getTasksForDate(selectedDate);
+      console.log(`Loaded ${tasksForDate.length} tasks for ${selectedDate}`);
+      tasksForDate.forEach(t => console.log(`  - ${t.text} (completed: ${t.completed})`));
       setTasks(tasksForDate);
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -62,12 +80,14 @@ export const DailyTasks: React.FC = () => {
         taskGroupId,
         text: newTaskText,
         date: selectedDate,
+        dueDate: newTaskDueDate || undefined,
         completed: false,
         priority: newTaskPriority
       };
 
       await window.electronAPI.tasks.addTask(task);
       setNewTaskText('');
+      setNewTaskDueDate('');
       loadTasks();
     } catch (error) {
       console.error('Error adding task:', error);
@@ -78,15 +98,25 @@ export const DailyTasks: React.FC = () => {
     try {
       const newCompletedState = !task.completed;
       
+      // Update the current task status
       await window.electronAPI.tasks.updateTask(task.id, {
         completed: newCompletedState
       });
 
-      // If marking as complete, delete all future instances of this task group
+      // If marking as complete, delete all FUTURE instances of this task group
       if (newCompletedState) {
+        console.log(`Marking task complete: ${task.text}`);
         await deleteFutureTasksByGroupId(task.taskGroupId);
+        // Wait to ensure deletion is persisted
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } else {
+        // If marking as incomplete, wait to ensure the state is persisted
+        // so rollover can pick it up when navigating to future days
+        console.log(`Marking task incomplete: ${task.text}`);
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
+      // Reload tasks to update the UI
       loadTasks();
     } catch (error) {
       console.error('Error updating task:', error);
@@ -105,6 +135,7 @@ export const DailyTasks: React.FC = () => {
   const handleEditTask = (task: DailyTask) => {
     setEditingTaskId(task.id);
     setEditingTaskText(task.text);
+    setEditingTaskDueDate(task.dueDate || '');
     setEditingTaskPriority(task.priority);
   };
 
@@ -121,6 +152,7 @@ export const DailyTasks: React.FC = () => {
       // Update the current task (preserves taskGroupId)
       await window.electronAPI.tasks.updateTask(editingTaskId, {
         text: editingTaskText,
+        dueDate: editingTaskDueDate || undefined,
         priority: editingTaskPriority
       });
 
@@ -136,6 +168,7 @@ export const DailyTasks: React.FC = () => {
 
       setEditingTaskId(null);
       setEditingTaskText('');
+      setEditingTaskDueDate('');
       loadTasks();
     } catch (error) {
       console.error('Error saving task:', error);
@@ -145,6 +178,7 @@ export const DailyTasks: React.FC = () => {
   const handleCancelEditTask = () => {
     setEditingTaskId(null);
     setEditingTaskText('');
+    setEditingTaskDueDate('');
   };
 
   const updateFutureRecurringTasks = async (taskId: string, newText: string, newPriority: 'low' | 'medium' | 'high') => {
@@ -205,10 +239,15 @@ export const DailyTasks: React.FC = () => {
         t.date > selectedDate
       );
 
+      console.log(`Deleting ${futureTasksToDelete.length} future tasks with groupId ${taskGroupId} after ${selectedDate}`);
+
       // Delete all future instances
       for (const task of futureTasksToDelete) {
+        console.log(`  Deleting task: ${task.text} on ${task.date}`);
         await window.electronAPI.tasks.deleteTask(task.id);
       }
+      
+      console.log(`Finished deleting future tasks`);
     } catch (error) {
       console.error('Error deleting future task instances:', error);
     }
@@ -216,45 +255,78 @@ export const DailyTasks: React.FC = () => {
 
   const handleRollover = async () => {
     try {
-      // Get all tasks to find incomplete ones from any previous day
       const allTasks = await window.electronAPI.tasks.getAllTasks();
       
-      // Find all incomplete tasks from previous days (not rolled over yet)
-      // Exclude recurring tasks - they get created fresh each day
-      const incompleteTasks = allTasks.filter(t => 
-        !t.completed && 
-        !t.rolledOver && 
-        !t.recurring &&
-        t.date < selectedDate
-      );
-
-      // Check if any incomplete tasks already exist for today
-      const existingTasks = await window.electronAPI.tasks.getTasksForDate(selectedDate);
+      console.log(`Rollover check for ${selectedDate}. Total tasks in DB: ${allTasks.length}`);
       
-      // Create a set of existing task group IDs to avoid duplicates
-      const existingGroupIds = new Set(existingTasks.map(t => t.taskGroupId));
+      // Get all unique task groups from previous days
+      const tasksByGroup = new Map<string, DailyTask>();
+      
+      // Find the most recent version of each task group from previous days
+      allTasks
+        .filter(t => t.date < selectedDate && !t.recurring)
+        .sort((a, b) => b.date.localeCompare(a.date)) // Sort by date descending (most recent first)
+        .forEach(task => {
+          // Only keep the most recent version of each task group
+          if (!tasksByGroup.has(task.taskGroupId)) {
+            tasksByGroup.set(task.taskGroupId, task);
+          }
+        });
+      
+      console.log(`Found ${tasksByGroup.size} unique task groups from previous days`);
+      
+      // Filter to only incomplete tasks that should roll over
+      const incompleteTaskGroups = Array.from(tasksByGroup.values()).filter(t => !t.completed);
+      console.log(`${incompleteTaskGroups.length} are incomplete and should roll over`);
+      incompleteTaskGroups.forEach(t => console.log(`  - ${t.text} from ${t.date} (groupId: ${t.taskGroupId})`));
+
+      // Check what already exists for today
+      let existingTasks = await window.electronAPI.tasks.getTasksForDate(selectedDate);
+      let existingGroupIds = new Set(existingTasks.map(t => t.taskGroupId));
 
       // Add incomplete tasks to today if they don't already exist
-      for (const task of incompleteTasks) {
+      for (const task of incompleteTaskGroups) {
         if (!existingGroupIds.has(task.taskGroupId)) {
+          // Check if task has a due date matching today - if so, make it high priority
+          let priority = task.priority;
+          if (task.dueDate === selectedDate) {
+            priority = 'high';
+            console.log(`  Task ${task.text} is due today - promoting to HIGH priority`);
+          }
+
           const newTask: DailyTask = {
             id: Date.now().toString() + Math.random(),
             taskGroupId: task.taskGroupId,
             text: task.text,
             date: selectedDate,
+            dueDate: task.dueDate,
             completed: false,
-            priority: task.priority,
+            priority: priority,
             recurring: task.recurring,
-            recurringPattern: task.recurringPattern,
-            rolledOver: true
+            recurringPattern: task.recurringPattern
           };
+          console.log(`  Rolling over: ${newTask.text}`);
           await window.electronAPI.tasks.addTask(newTask);
+          await new Promise(resolve => setTimeout(resolve, 10));
+          // Refresh existing tasks after adding a new one
+          existingTasks = await window.electronAPI.tasks.getTasksForDate(selectedDate);
+          existingGroupIds = new Set(existingTasks.map(t => t.taskGroupId));
+        } else {
+          console.log(`  Task ${task.text} already exists for ${selectedDate}, skipping`);
         }
+      }
 
-        // Mark the original task as rolled over
-        await window.electronAPI.tasks.updateTask(task.id, {
-          rolledOver: true
-        });
+      // Reload existing tasks one more time to get the latest state
+      existingTasks = await window.electronAPI.tasks.getTasksForDate(selectedDate);
+      
+      // Check existing tasks for today - if any have due date matching today, promote to high priority
+      for (const existingTask of existingTasks) {
+        if (existingTask.dueDate === selectedDate && existingTask.priority !== 'high' && !existingTask.completed) {
+          console.log(`  Existing task ${existingTask.text} is due today - promoting to HIGH priority`);
+          await window.electronAPI.tasks.updateTask(existingTask.id, {
+            priority: 'high'
+          });
+        }
       }
     } catch (error) {
       console.error('Error during rollover:', error);
@@ -418,6 +490,20 @@ export const DailyTasks: React.FC = () => {
     }
   };
 
+  const isOverdue = (task: DailyTask): boolean => {
+    if (!task.dueDate || task.completed) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return task.dueDate < today;
+  };
+
+  const getEffectivePriority = (task: DailyTask): 'low' | 'medium' | 'high' => {
+    // If task is overdue, treat it as high priority
+    if (isOverdue(task)) {
+      return 'high';
+    }
+    return task.priority;
+  };
+
   const getSortedTasks = (): DailyTask[] => {
     const priorityOrder = { high: 0, medium: 1, low: 2 };
     
@@ -425,14 +511,14 @@ export const DailyTasks: React.FC = () => {
     const incompleteTasks = tasks.filter(t => !t.completed);
     const completedTasks = tasks.filter(t => t.completed);
 
-    // Sort incomplete tasks: recurring first, then by priority
+    // Sort incomplete tasks: recurring first, then by priority (considering overdue)
     incompleteTasks.sort((a, b) => {
       // Recurring tasks come first
       if (a.recurring !== b.recurring) {
         return a.recurring ? -1 : 1;
       }
-      // Then sort by priority
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
+      // Then sort by effective priority (overdue tasks are high priority)
+      return priorityOrder[getEffectivePriority(a)] - priorityOrder[getEffectivePriority(b)];
     });
 
     // Return incomplete tasks first, then completed tasks at the bottom
@@ -489,6 +575,13 @@ export const DailyTasks: React.FC = () => {
               placeholder="Enter a new task..."
               className="task-input-inline"
             />
+            <input
+              type="date"
+              value={newTaskDueDate}
+              onChange={e => setNewTaskDueDate(e.target.value)}
+              className="task-input-inline"
+              title="Due date (optional)"
+            />
             <select
               value={newTaskPriority}
               onChange={e =>
@@ -532,6 +625,13 @@ export const DailyTasks: React.FC = () => {
                           className="task-edit-input"
                           placeholder="Edit task..."
                         />
+                        <input
+                          type="date"
+                          value={editingTaskDueDate}
+                          onChange={e => setEditingTaskDueDate(e.target.value)}
+                          className="task-edit-input"
+                          title="Due date (optional)"
+                        />
                         <select
                           value={editingTaskPriority}
                           onChange={e =>
@@ -560,9 +660,9 @@ export const DailyTasks: React.FC = () => {
                       </div>
                     ) : (
                       <div
-                        className={`task-item priority-${task.priority} ${
+                        className={`task-item priority-${getEffectivePriority(task)} ${
                           task.completed ? 'completed' : ''
-                        }`}
+                        } ${isOverdue(task) ? 'overdue' : ''}`}
                       >
                         <input
                           type="checkbox"
@@ -572,14 +672,20 @@ export const DailyTasks: React.FC = () => {
                         />
                         <div className="task-content">
                           <span className="task-text">{task.text}</span>
+                          {task.dueDate && (
+                            <span className={`task-due-date ${isOverdue(task) ? 'overdue-date' : ''}`}>
+                              Due: {new Date(task.dueDate).toLocaleDateString()}
+                              {isOverdue(task) && ' ⚠️ OVERDUE'}
+                            </span>
+                          )}
                           <div className="task-badges">
                             {task.recurring && (
                               <span className="task-badge recurring-badge">
                                 🔄 Recurring
                               </span>
                             )}
-                            <span className={`task-priority priority-${task.priority}`}>
-                              {task.priority}
+                            <span className={`task-priority priority-${getEffectivePriority(task)}`}>
+                              {isOverdue(task) ? 'overdue' : task.priority}
                             </span>
                           </div>
                         </div>

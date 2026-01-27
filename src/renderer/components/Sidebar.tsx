@@ -2,8 +2,8 @@ import React from 'react';
 import './Sidebar.css';
 
 interface SidebarProps {
-  activeSection: 'team' | 'tasks' | 'hours';
-  onSectionChange: (section: 'team' | 'tasks' | 'hours') => void;
+  activeSection: 'team' | 'tasks' | 'hours' | 'training' | 'calendar';
+  onSectionChange: (section: 'team' | 'tasks' | 'hours' | 'training' | 'calendar') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
@@ -35,11 +35,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
             <span className="nav-label">Daily Tasks</span>
           </button>
           <button
+            className={`nav-item ${activeSection === 'calendar' ? 'active' : ''}`}
+            onClick={() => onSectionChange('calendar')}
+          >
+            <span className="nav-icon">📅</span>
+            <span className="nav-label">Calendar</span>
+          </button>
+          <button
             className={`nav-item ${activeSection === 'hours' ? 'active' : ''}`}
             onClick={() => onSectionChange('hours')}
           >
             <span className="nav-icon">⏱️</span>
             <span className="nav-label">Working Hours</span>
+          </button>
+          <button
+            className={`nav-item ${activeSection === 'training' ? 'active' : ''}`}
+            onClick={() => onSectionChange('training')}
+          >
+            <span className="nav-icon">🎓</span>
+            <span className="nav-label">Training & Certs</span>
           </button>
         </div>
       </nav>

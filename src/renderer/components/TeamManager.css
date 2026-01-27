@@ -789,9 +789,22 @@
   flex: 1;
 }
 
+.objective-checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
 .objective-text {
   color: #333;
   font-weight: 500;
+}
+
+.objective-text.completed {
+  text-decoration: line-through;
+  color: #999;
 }
 
 .objective-date {
@@ -876,4 +889,27 @@
 .employees-grid::-webkit-scrollbar-thumb:hover,
 .employee-detail::-webkit-scrollbar-thumb:hover {
   background: #bbb;
+}
+
+/* Notes Section */
+.notes-section {
+  grid-column: 1 / -1;
+  min-height: 150px;
+}
+
+.notes-textarea {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
