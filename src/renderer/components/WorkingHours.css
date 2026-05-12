@@ -129,6 +129,13 @@
   min-width: 80px;
 }
 
+.day-date {
+  font-weight: 400;
+  color: #999;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
 .time-cell {
   font-family: 'Courier New', monospace;
   color: #667eea;

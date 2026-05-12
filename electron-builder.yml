@@ -11,7 +11,7 @@ files:
 
 win:
   target:
-    - portable
+    - dir
 
 nsis:
   oneClick: false

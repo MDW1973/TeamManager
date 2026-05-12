@@ -320,7 +320,7 @@ export const WorkingHours: React.FC = () => {
                         
                         return (
                           <tr key={`${week.weekStart}-${idx}`} className={entry?.login ? '' : 'no-data'}>
-                            <td className="day-cell">{dayName.substring(0, 3)}</td>
+                            <td className="day-cell">{dayName.substring(0, 3)} <span className="day-date">{dayDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span></td>
                             <td className="time-cell">{entry?.login || '-'}</td>
                             <td className="time-cell">12:00</td>
                             <td className="time-cell">12:30</td>
