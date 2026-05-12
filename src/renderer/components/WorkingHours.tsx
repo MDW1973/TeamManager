@@ -106,7 +106,7 @@ export const WorkingHours: React.FC = () => {
               totalMinutes = (lastLogoff.getTime() - firstLogon.getTime()) / 60000;
             } else {
               // No logoff today, calculate until now if it's today
-              const today = new Date().toISOString().split('T')[0];
+              const today = new Date().toLocaleDateString('en-CA');
               if (dateStr === today) {
                 totalMinutes = (new Date().getTime() - firstLogon.getTime()) / 60000;
               }
@@ -131,11 +131,12 @@ export const WorkingHours: React.FC = () => {
       // Organize into weeks (Monday-Sunday)
       const weekMap = new Map<string, WorkHourEntry[]>();
       entries.forEach(entry => {
-        const date = new Date(entry.date + 'T00:00:00');
+        const [ey, em, ed] = entry.date.split('-').map(Number);
+        const date = new Date(ey, em - 1, ed);
         const dayOfWeek = date.getDay();
         const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
         const monday = new Date(date.getFullYear(), date.getMonth(), diff);
-        const weekKey = monday.toISOString().split('T')[0];
+        const weekKey = monday.toLocaleDateString('en-CA'); // YYYY-MM-DD local
         
         if (!weekMap.has(weekKey)) {
           weekMap.set(weekKey, []);
@@ -145,11 +146,11 @@ export const WorkingHours: React.FC = () => {
 
       const weeksArray: WeekData[] = Array.from(weekMap.entries())
         .map(([weekStart, days]) => {
-          const endDate = new Date(weekStart + 'T00:00:00');
-          endDate.setDate(endDate.getDate() + 6);
+          const [wy, wm, wd] = weekStart.split('-').map(Number);
+          const endDate = new Date(wy, wm - 1, wd + 6);
           return {
             weekStart,
-            weekEnd: endDate.toISOString().split('T')[0],
+            weekEnd: endDate.toLocaleDateString('en-CA'),
             days: days.sort((a, b) => a.date.localeCompare(b.date))
           };
         })
@@ -201,9 +202,9 @@ export const WorkingHours: React.FC = () => {
       
       // Add Mon-Fri data (first 5 days) - only times, no headers or day names
       days.forEach((dayName, idx) => {
-        const dayDate = new Date(week.weekStart + 'T00:00:00');
-        dayDate.setDate(dayDate.getDate() + idx);
-        const dateStr = dayDate.toISOString().split('T')[0];
+        const [wY, wM, wD] = week.weekStart.split('-').map(Number);
+        const dayDate = new Date(wY, wM - 1, wD + idx);
+        const dateStr = dayDate.toLocaleDateString('en-CA');
         const entry = week.days.find(d => d.date === dateStr);
         
         // Times are already in 24-hour format
@@ -271,8 +272,10 @@ export const WorkingHours: React.FC = () => {
           </div>
         ) : (
           weeks.map((week) => {
-            const startDate = new Date(week.weekStart + 'T00:00:00');
-            const endDate = new Date(week.weekEnd + 'T00:00:00');
+            const [sY, sM, sD] = week.weekStart.split('-').map(Number);
+            const [eY, eM, eD] = week.weekEnd.split('-').map(Number);
+            const startDate = new Date(sY, sM - 1, sD);
+            const endDate = new Date(eY, eM - 1, eD);
             const weekLabel = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
             const isExpanded = expandedWeeks.has(week.weekStart);
             
@@ -313,9 +316,9 @@ export const WorkingHours: React.FC = () => {
                       const maxIdx = isExpanded ? 7 : 5;
                       
                       return days.slice(0, maxIdx).map((dayName, idx) => {
-                        const dayDate = new Date(week.weekStart + 'T00:00:00');
-                        dayDate.setDate(dayDate.getDate() + idx);
-                        const dateStr = dayDate.toISOString().split('T')[0];
+                        const [wY, wM, wD] = week.weekStart.split('-').map(Number);
+                        const dayDate = new Date(wY, wM - 1, wD + idx);
+                        const dateStr = dayDate.toLocaleDateString('en-CA');
                         const entry = week.days.find(d => d.date === dateStr);
                         
                         return (
