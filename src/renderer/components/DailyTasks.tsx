@@ -5,7 +5,7 @@ import './DailyTasks.css';
 export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navigateToDate }) => {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [newTaskText, setNewTaskText] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -334,23 +334,24 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
   };
 
   const handlePreviousDay = () => {
-    const date = new Date(selectedDate);
-    date.setDate(date.getDate() - 1);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const date = new Date(y, m - 1, d - 1);
+    setSelectedDate(date.toLocaleDateString('en-CA')); // YYYY-MM-DD in local time
   };
 
   const handleNextDay = () => {
-    const date = new Date(selectedDate);
-    date.setDate(date.getDate() + 1);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const date = new Date(y, m - 1, d + 1);
+    setSelectedDate(date.toLocaleDateString('en-CA'));
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date().toISOString().split('T')[0]);
+    setSelectedDate(new Date().toLocaleDateString('en-CA'));
   };
 
   const completedCount = tasks.filter(t => t.completed).length;
-  const displayDate = new Date(selectedDate).toLocaleDateString('en-US', {
+  const [selY, selM, selD] = selectedDate.split('-').map(Number);
+  const displayDate = new Date(selY, selM - 1, selD).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -492,7 +493,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
 
   const isOverdue = (task: DailyTask): boolean => {
     if (!task.dueDate || task.completed) return false;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA');
     return task.dueDate < today;
   };
 
@@ -674,7 +675,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
                           <span className="task-text">{task.text}</span>
                           {task.dueDate && (
                             <span className={`task-due-date ${isOverdue(task) ? 'overdue-date' : ''}`}>
-                              Due: {new Date(task.dueDate).toLocaleDateString()}
+                              Due: {(() => { const [dy, dm, dd] = task.dueDate.split('-').map(Number); return new Date(dy, dm - 1, dd).toLocaleDateString(); })()}
                               {isOverdue(task) && ' ⚠️ OVERDUE'}
                             </span>
                           )}

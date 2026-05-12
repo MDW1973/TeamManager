@@ -71,18 +71,18 @@ export const Calendar: React.FC = () => {
   };
 
   const getMonday = (date: Date): Date => {
-    const d = new Date(date);
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
+    d.setDate(diff);
+    return d;
   };
 
   const getWeekDates = (date: Date): Date[] => {
     const monday = getMonday(date);
     const dates: Date[] = [];
     for (let i = 0; i < 5; i++) {
-      const d = new Date(monday);
-      d.setDate(d.getDate() + i);
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
       dates.push(d);
     }
     return dates;
@@ -165,7 +165,8 @@ export const Calendar: React.FC = () => {
   const weekDates = getWeekDates(currentDate);
   const weekStart = weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const weekEnd = weekDates[4].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const today = new Date().toISOString().split('T')[0];
+  const todayLocal = new Date();
+  const today = todayLocal.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
   return (
     <div className="calendar">
@@ -229,7 +230,7 @@ export const Calendar: React.FC = () => {
       <div className="calendar-week-grid">
         {/* Day headers and content */}
         {weekDates.map((date, idx) => {
-          const dateStr = date.toISOString().split('T')[0];
+          const dateStr = date.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const dayNum = date.getDate();
           const dayTasks = getTasksForDate(dateStr);
@@ -246,6 +247,36 @@ export const Calendar: React.FC = () => {
               allItems.push(item);
             }
           });
+
+          // Sort items: recurring first, then by priority (high, med, low), then objectives (appraisal, 1:1)
+          allItems.sort((a, b) => {
+            const isObjectiveA = 'employeeName' in a;
+            const isObjectiveB = 'employeeName' in b;
+            
+            // Recurring tasks first
+            if (a.recurring && !b.recurring) return -1;
+            if (!a.recurring && b.recurring) return 1;
+            
+            // Then daily tasks by priority
+            if (!isObjectiveA && !isObjectiveB) {
+              const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+              const priorityA = priorityOrder[a.priority] ?? 3;
+              const priorityB = priorityOrder[b.priority] ?? 3;
+              return priorityA - priorityB;
+            }
+            
+            // Daily tasks before objectives
+            if (!isObjectiveA && isObjectiveB) return -1;
+            if (isObjectiveA && !isObjectiveB) return 1;
+            
+            // Objectives: appraisal before 1:1
+            if (isObjectiveA && isObjectiveB) {
+              if (a.type === 'objective' && b.type === 'oneToOne') return -1;
+              if (a.type === 'oneToOne' && b.type === 'objective') return 1;
+            }
+            
+            return 0;
+          });
           
           const isToday = dateStr === today;
 
@@ -260,7 +291,7 @@ export const Calendar: React.FC = () => {
               </div>
               <div className="day-content">
                 <div className="day-tasks">
-                  {allItems.slice(0, 5).map((item, idx) => {
+                  {allItems.map((item, idx) => {
                     const isObjective = 'employeeName' in item;
                     const objectiveItem = item as ObjectiveTask;
                     const priority = isObjective ? 'medium' : item.priority;
@@ -280,9 +311,6 @@ export const Calendar: React.FC = () => {
                       </div>
                     );
                   })}
-                  {allItems.length > 5 && (
-                    <div className="task-more-mini">+{allItems.length - 5} more</div>
-                  )}
                 </div>
               </div>
             </div>
