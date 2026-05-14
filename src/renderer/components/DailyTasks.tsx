@@ -524,6 +524,23 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
     e.preventDefault();
     setIsDragOver(false);
 
+    const createTaskFromEmail = async (subject: string, sender: string) => {
+      const taskText = sender ? `${subject} (from: ${sender})` : subject;
+      const dueDate = getFourWorkingDaysFromNow();
+      const taskGroupId = Date.now().toString() + Math.random();
+      const task: DailyTask = {
+        id: Date.now().toString() + Math.random(),
+        taskGroupId,
+        text: taskText,
+        date: selectedDate,
+        dueDate,
+        completed: false,
+        priority: 'medium'
+      };
+      await window.electronAPI.tasks.addTask(task);
+      loadTasks();
+    };
+
     // Handle Outlook Web (New Outlook) drag format - 'maillistrow' or 'multimaillistmessagerows'
     const outlookTypes = ['maillistrow', 'multimaillistmessagerows'];
     for (const type of outlookTypes) {
@@ -532,14 +549,10 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
         if (rawData) {
           try {
             const parsed = JSON.parse(rawData);
-            // subjects is an array - grab the first one
             const subjects: string[] = parsed.subjects || [];
             const senderEmail: string = parsed.mailboxInfos?.[0]?.mailboxSmtpAddress || '';
             const subject = subjects[0] || 'Email task';
-            const taskText = senderEmail ? `${subject} (from: ${senderEmail})` : subject;
-            setNewTaskText(taskText);
-            setNewTaskPriority('medium');
-            setNewTaskDueDate(getFourWorkingDaysFromNow());
+            await createTaskFromEmail(subject, senderEmail);
             return;
           } catch (err) {
             console.error('Failed to parse Outlook drag data:', err);
@@ -557,10 +570,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
         const emailData = await window.electronAPI.readMsgFile(filePath);
         const subject = emailData.subject || 'Email task';
         const sender = emailData.senderName || emailData.senderEmail || '';
-        const taskText = sender ? `${subject} (from: ${sender})` : subject;
-        setNewTaskText(taskText);
-        setNewTaskPriority('medium');
-        setNewTaskDueDate(getFourWorkingDaysFromNow());
+        await createTaskFromEmail(subject, sender);
       } catch (error) {
         console.error('Failed to read .msg file:', error);
       }
