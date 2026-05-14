@@ -5,6 +5,8 @@ import { execSync } from 'child_process';
 import * as teamDataService from './services/teamDataService';
 import * as tasksDataService from './services/tasksDataService';
 import { TeamData, TasksData, Employee, DailyTask, Training } from './types';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const MsgReader = require('msgreader').default;
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -295,6 +297,22 @@ function setupIpcHandlers(): void {
       return result;
     } catch (error) {
       throw new Error(`PowerShell execution failed: ${error}`);
+    }
+  });
+
+  // Outlook .msg file reader
+  ipcMain.handle('system:readMsgFile', (event, filePath: string) => {
+    try {
+      const buffer = fs.readFileSync(filePath);
+      const reader = new MsgReader(buffer);
+      const fileData = reader.getFileData();
+      return {
+        subject: fileData.subject || '',
+        senderName: fileData.senderName || '',
+        senderEmail: fileData.senderSmtpAddress || fileData.senderEmail || ''
+      };
+    } catch (error) {
+      throw new Error(`Failed to read .msg file: ${error}`);
     }
   });
 }

@@ -31,7 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getWorkHoursForDate: (date: string) => ipcRenderer.invoke('tasks:getWorkHoursForDate', date)
   },
   // System API
-  runPowerShell: (command: string) => ipcRenderer.invoke('system:runPowerShell', command)
+  runPowerShell: (command: string) => ipcRenderer.invoke('system:runPowerShell', command),
+  readMsgFile: (filePath: string) => ipcRenderer.invoke('system:readMsgFile', filePath)
 });
 
 declare global {
@@ -64,6 +65,7 @@ declare global {
         getWorkHoursForDate: (date: string) => Promise<WorkHours | undefined>;
       };
       runPowerShell: (command: string) => Promise<string>;
+      readMsgFile: (filePath: string) => Promise<{ subject: string; senderName: string; senderEmail: string }>;
     };
   }
 }

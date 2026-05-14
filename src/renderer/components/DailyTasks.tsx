@@ -505,6 +505,46 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
     return task.priority;
   };
 
+  const getFourWorkingDaysFromNow = (): string => {
+    const date = new Date();
+    let workingDaysAdded = 0;
+    while (workingDaysAdded < 4) {
+      date.setDate(date.getDate() + 1);
+      const day = date.getDay();
+      if (day !== 0 && day !== 6) { // skip Saturday (6) and Sunday (0)
+        workingDaysAdded++;
+      }
+    }
+    return date.toLocaleDateString('en-CA'); // YYYY-MM-DD local
+  };
+
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleEmailDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const msgFile = files.find(f => f.name.toLowerCase().endsWith('.msg'));
+    if (!msgFile) return;
+
+    try {
+      // Electron exposes the real file path on the File object
+      const filePath = (msgFile as any).path;
+      const emailData = await window.electronAPI.readMsgFile(filePath);
+
+      const subject = emailData.subject || 'Email task';
+      const sender = emailData.senderName || emailData.senderEmail || '';
+      const taskText = sender ? `${subject} (from: ${sender})` : subject;
+
+      setNewTaskText(taskText);
+      setNewTaskPriority('medium');
+      setNewTaskDueDate(getFourWorkingDaysFromNow());
+    } catch (error) {
+      console.error('Failed to read .msg file:', error);
+    }
+  };
+
   const getSortedTasks = (): DailyTask[] => {
     const priorityOrder = { high: 0, medium: 1, low: 2 };
     
@@ -563,6 +603,14 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
         </div>
 
         <div className="add-task-section">
+          <div
+            className={`email-drop-zone ${isDragOver ? 'drag-over' : ''}`}
+            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={handleEmailDrop}
+          >
+            📧 Drop an Outlook email here to create a task
+          </div>
           <div className="add-task-form">
             <input
               type="text"
