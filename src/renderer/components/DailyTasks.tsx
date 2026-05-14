@@ -524,24 +524,46 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
     e.preventDefault();
     setIsDragOver(false);
 
+    // Handle Outlook Web (New Outlook) drag format - 'maillistrow' or 'multimaillistmessagerows'
+    const outlookTypes = ['maillistrow', 'multimaillistmessagerows'];
+    for (const type of outlookTypes) {
+      if (e.dataTransfer.types.includes(type)) {
+        const rawData = e.dataTransfer.getData(type);
+        if (rawData) {
+          try {
+            const parsed = JSON.parse(rawData);
+            // subjects is an array - grab the first one
+            const subjects: string[] = parsed.subjects || [];
+            const senderEmail: string = parsed.mailboxInfos?.[0]?.mailboxSmtpAddress || '';
+            const subject = subjects[0] || 'Email task';
+            const taskText = senderEmail ? `${subject} (from: ${senderEmail})` : subject;
+            setNewTaskText(taskText);
+            setNewTaskPriority('medium');
+            setNewTaskDueDate(getFourWorkingDaysFromNow());
+            return;
+          } catch (err) {
+            console.error('Failed to parse Outlook drag data:', err);
+          }
+        }
+      }
+    }
+
+    // Fallback: .msg file drop (classic desktop Outlook)
     const files = Array.from(e.dataTransfer.files);
     const msgFile = files.find(f => f.name.toLowerCase().endsWith('.msg'));
-    if (!msgFile) return;
-
-    try {
-      // Electron exposes the real file path on the File object
-      const filePath = (msgFile as any).path;
-      const emailData = await window.electronAPI.readMsgFile(filePath);
-
-      const subject = emailData.subject || 'Email task';
-      const sender = emailData.senderName || emailData.senderEmail || '';
-      const taskText = sender ? `${subject} (from: ${sender})` : subject;
-
-      setNewTaskText(taskText);
-      setNewTaskPriority('medium');
-      setNewTaskDueDate(getFourWorkingDaysFromNow());
-    } catch (error) {
-      console.error('Failed to read .msg file:', error);
+    if (msgFile) {
+      try {
+        const filePath = (msgFile as any).path;
+        const emailData = await window.electronAPI.readMsgFile(filePath);
+        const subject = emailData.subject || 'Email task';
+        const sender = emailData.senderName || emailData.senderEmail || '';
+        const taskText = sender ? `${subject} (from: ${sender})` : subject;
+        setNewTaskText(taskText);
+        setNewTaskPriority('medium');
+        setNewTaskDueDate(getFourWorkingDaysFromNow());
+      } catch (error) {
+        console.error('Failed to read .msg file:', error);
+      }
     }
   };
 

@@ -181,6 +181,19 @@ function createWindow(): void {
     mainWindow = null;
   });
 
+  // Handle file drops at the webContents level so Electron exposes file paths
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    // Prevent navigation when files are dropped on the window
+    if (url.startsWith('file://') && url.endsWith('.msg')) {
+      event.preventDefault();
+    }
+  });
+
+  // Pass dropped .msg file paths to the renderer
+  mainWindow.webContents.session.on('will-download', (event, item) => {
+    // Not needed but keeps session clean
+  });
+
   createApplicationMenu();
   setupIpcHandlers();
 }
