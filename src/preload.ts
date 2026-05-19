@@ -65,7 +65,7 @@ declare global {
         getWorkHoursForDate: (date: string) => Promise<WorkHours | undefined>;
       };
       runPowerShell: (command: string) => Promise<string>;
-      readMsgFile: (filePath: string) => Promise<{ subject: string; senderName: string; senderEmail: string }>;
+      readMsgFile: (filePath: string) => Promise<{ subject: string; senderName: string; senderEmail: string; body: string }>;
     };
   }
 }

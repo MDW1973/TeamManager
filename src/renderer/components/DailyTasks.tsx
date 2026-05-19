@@ -22,6 +22,8 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
   const [editingRecurringPattern, setEditingRecurringPattern] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [editingRecurringPriority, setEditingRecurringPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [recurringTasksCreated, setRecurringTasksCreated] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<DailyTask | null>(null);
+  const [editingNotes, setEditingNotes] = useState('');
 
   useEffect(() => {
     // If navigating from calendar, update the selected date
@@ -137,6 +139,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
     setEditingTaskText(task.text);
     setEditingTaskDueDate(task.dueDate || '');
     setEditingTaskPriority(task.priority);
+    setEditingNotes(task.notes || '');
   };
 
   const handleSaveEditTask = async () => {
@@ -153,7 +156,8 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
       await window.electronAPI.tasks.updateTask(editingTaskId, {
         text: editingTaskText,
         dueDate: editingTaskDueDate || undefined,
-        priority: editingTaskPriority
+        priority: editingTaskPriority,
+        notes: editingNotes || undefined
       });
 
       // Update all future instances of this task group with the new text/priority
@@ -179,6 +183,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
     setEditingTaskId(null);
     setEditingTaskText('');
     setEditingTaskDueDate('');
+    setEditingNotes('');
   };
 
   const updateFutureRecurringTasks = async (taskId: string, newText: string, newPriority: 'low' | 'medium' | 'high') => {
@@ -524,7 +529,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
     e.preventDefault();
     setIsDragOver(false);
 
-    const createTaskFromEmail = async (subject: string, sender: string) => {
+    const createTaskFromEmail = async (subject: string, sender: string, body?: string) => {
       const taskText = sender ? `${subject} (from: ${sender})` : subject;
       const dueDate = getFourWorkingDaysFromNow();
       const taskGroupId = Date.now().toString() + Math.random();
@@ -535,10 +540,12 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
         date: selectedDate,
         dueDate,
         completed: false,
-        priority: 'medium'
+        priority: 'medium',
+        notes: body || undefined
       };
       await window.electronAPI.tasks.addTask(task);
-      loadTasks();
+      await loadTasks();
+      setSelectedTask(task);
     };
 
     // Handle Outlook Web (New Outlook) drag format - 'maillistrow' or 'multimaillistmessagerows'
@@ -552,7 +559,9 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
             const subjects: string[] = parsed.subjects || [];
             const senderEmail: string = parsed.mailboxInfos?.[0]?.mailboxSmtpAddress || '';
             const subject = subjects[0] || 'Email task';
-            await createTaskFromEmail(subject, senderEmail);
+            // body is not in the drag data from New Outlook - use preview if available
+            const body: string = parsed.itemData?.preview || parsed.preview || '';
+            await createTaskFromEmail(subject, senderEmail, body);
             return;
           } catch (err) {
             console.error('Failed to parse Outlook drag data:', err);
@@ -570,7 +579,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
         const emailData = await window.electronAPI.readMsgFile(filePath);
         const subject = emailData.subject || 'Email task';
         const sender = emailData.senderName || emailData.senderEmail || '';
-        await createTaskFromEmail(subject, sender);
+        await createTaskFromEmail(subject, sender, emailData.body);
       } catch (error) {
         console.error('Failed to read .msg file:', error);
       }
@@ -681,8 +690,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
         </div>
 
         <div className="tasks-main">
-          <div className="tasks-list">
-            <div className="tasks-header-info">
+          <div className="tasks-list">            <div className="tasks-header-info">
               <h2>Tasks</h2>
               <span className="task-count">
                 {completedCount} of {tasks.length} completed
@@ -738,12 +746,12 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
                             Cancel
                           </button>
                         </div>
-                      </div>
-                    ) : (
+                      </div>                    ) : (
                       <div
                         className={`task-item priority-${getEffectivePriority(task)} ${
                           task.completed ? 'completed' : ''
-                        } ${isOverdue(task) ? 'overdue' : ''}`}
+                        } ${isOverdue(task) ? 'overdue' : ''} ${selectedTask?.id === task.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedTask(selectedTask?.id === task.id ? null : task)}
                       >
                         <input
                           type="checkbox"
@@ -788,6 +796,32 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Notes Panel */}
+          <div className="notes-panel">
+            <div className="notes-panel-header">
+              <h3>📝 Notes</h3>
+              {selectedTask && <span className="notes-task-title">{selectedTask.text}</span>}
+            </div>
+            {selectedTask ? (
+              <textarea
+                className="notes-textarea"
+                value={selectedTask.notes || ''}
+                onChange={async e => {
+                  const newNotes = e.target.value;
+                  const updated = { ...selectedTask, notes: newNotes };
+                  setSelectedTask(updated);
+                  setTasks(prev => prev.map(t => t.id === selectedTask.id ? updated : t));
+                  await window.electronAPI.tasks.updateTask(selectedTask.id, { notes: newNotes });
+                }}
+                placeholder="Add notes for this task..."
+              />
+            ) : (
+              <div className="notes-empty">
+                <p>Click a task to view or edit its notes</p>
               </div>
             )}
           </div>

@@ -48,6 +48,7 @@ export interface DailyTask {
   recurringPattern?: 'daily' | 'weekly' | 'monthly';
   rolledOver?: boolean;
   assignedTo?: string;
+  notes?: string;
 }
 
 export interface RecurringTask {

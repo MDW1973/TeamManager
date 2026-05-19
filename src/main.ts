@@ -322,7 +322,8 @@ function setupIpcHandlers(): void {
       return {
         subject: fileData.subject || '',
         senderName: fileData.senderName || '',
-        senderEmail: fileData.senderSmtpAddress || fileData.senderEmail || ''
+        senderEmail: fileData.senderSmtpAddress || fileData.senderEmail || '',
+        body: fileData.body || ''
       };
     } catch (error) {
       throw new Error(`Failed to read .msg file: ${error}`);
