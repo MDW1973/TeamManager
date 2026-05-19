@@ -559,9 +559,8 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
             const subjects: string[] = parsed.subjects || [];
             const senderEmail: string = parsed.mailboxInfos?.[0]?.mailboxSmtpAddress || '';
             const subject = subjects[0] || 'Email task';
-            // body is not in the drag data from New Outlook - use preview if available
-            const body: string = parsed.itemData?.preview || parsed.preview || '';
-            await createTaskFromEmail(subject, senderEmail, body);
+            // Note: Outlook drag payload does not include email body - only subject/sender metadata
+            await createTaskFromEmail(subject, senderEmail, '');
             return;
           } catch (err) {
             console.error('Failed to parse Outlook drag data:', err);
@@ -650,7 +649,7 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleEmailDrop}
           >
-            📧 Drop an Outlook email here to create a task
+            📧 Drop an Outlook email here to create a task — then paste the email body into the Notes panel
           </div>
           <div className="add-task-form">
             <input
@@ -732,6 +731,12 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
                           <option value="medium">Medium Priority</option>
                           <option value="high">High Priority</option>
                         </select>
+                        <textarea
+                          value={editingNotes}
+                          onChange={e => setEditingNotes(e.target.value)}
+                          className="task-edit-input task-edit-notes"
+                          placeholder="Notes (optional)..."
+                        />
                         <div className="edit-actions">
                           <button
                             className="btn btn-primary"
