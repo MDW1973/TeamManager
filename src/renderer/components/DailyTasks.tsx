@@ -710,48 +710,43 @@ export const DailyTasks: React.FC<{ navigateToDate?: string | null }> = ({ navig
                         <textarea
                           value={editingTaskText}
                           onChange={e => setEditingTaskText(e.target.value)}
-                          className="task-edit-input"
+                          className="task-edit-input task-edit-input-text"
                           placeholder="Edit task..."
+                          rows={2}
                         />
-                        <input
-                          type="date"
-                          value={editingTaskDueDate}
-                          onChange={e => setEditingTaskDueDate(e.target.value)}
-                          className="task-edit-input"
-                          title="Due date (optional)"
-                        />
-                        <select
-                          value={editingTaskPriority}
-                          onChange={e =>
-                            setEditingTaskPriority(e.target.value as 'low' | 'medium' | 'high')
-                          }
-                          className="priority-select"
-                        >
-                          <option value="low">Low Priority</option>
-                          <option value="medium">Medium Priority</option>
-                          <option value="high">High Priority</option>
-                        </select>
+                        <div className="task-edit-row">
+                          <input
+                            type="date"
+                            value={editingTaskDueDate}
+                            onChange={e => setEditingTaskDueDate(e.target.value)}
+                            className="task-edit-input task-edit-date"
+                            title="Due date (optional)"
+                          />
+                          <select
+                            value={editingTaskPriority}
+                            onChange={e =>
+                              setEditingTaskPriority(e.target.value as 'low' | 'medium' | 'high')
+                            }
+                            className="task-edit-priority"
+                          >
+                            <option value="low">Low Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="high">High Priority</option>
+                          </select>
+                          <div className="edit-actions">
+                            <button className="btn btn-primary" onClick={handleSaveEditTask}>Save</button>
+                            <button className="btn btn-secondary" onClick={handleCancelEditTask}>Cancel</button>
+                          </div>
+                        </div>
                         <textarea
                           value={editingNotes}
                           onChange={e => setEditingNotes(e.target.value)}
                           className="task-edit-input task-edit-notes"
                           placeholder="Notes (optional)..."
+                          rows={4}
                         />
-                        <div className="edit-actions">
-                          <button
-                            className="btn btn-primary"
-                            onClick={handleSaveEditTask}
-                          >
-                            Save
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            onClick={handleCancelEditTask}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>                    ) : (
+                      </div>
+                    ) : (
                       <div
                         className={`task-item priority-${getEffectivePriority(task)} ${
                           task.completed ? 'completed' : ''

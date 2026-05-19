@@ -350,24 +350,55 @@
 .task-item.editing {
   flex-direction: column;
   gap: 10px;
-  padding: 12px;
+  padding: 16px;
   background-color: #f0f4ff;
   border-left-color: #667eea;
+  cursor: default;
+}
+
+.task-edit-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
 }
 
 .task-edit-input {
-  padding: 10px;
-  border: 1px solid #ddd;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #c5cae9;
   border-radius: 4px;
   font-family: inherit;
   font-size: 13px;
   resize: vertical;
-  min-height: 60px;
+  box-sizing: border-box;
+  background-color: white;
+}
+
+.task-edit-input-text {
+  min-height: 38px;
+  resize: none;
 }
 
 .task-edit-notes {
   min-height: 80px;
   color: #555;
+}
+
+.task-edit-date {
+  flex: 0 0 160px;
+  min-height: 36px;
+  resize: none;
+}
+
+.task-edit-priority {
+  flex: 0 0 160px;
+  padding: 8px;
+  border: 1px solid #c5cae9;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: white;
+  height: 36px;
 }
 
 .edit-actions {
